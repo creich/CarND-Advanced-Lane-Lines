@@ -70,14 +70,9 @@ def undistortImage(image, cameraMatrix, distortionCoeffs):
     return image
 
 
-def absSobelThresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
+# gray must be a 1 channel grayscale image
+def absSobelThresh(gray, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Calculate directional gradient
-
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
 
     # Apply x or y gradient with the OpenCV Sobel() function
     # and take the absolute value
@@ -96,14 +91,9 @@ def absSobelThresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
 
     return grad_binary
 
-def magThresh(image, sobel_kernel=3, magThresh=(0, 255)):
+# gray must be a 1 channel grayscale image
+def magThresh(gray, sobel_kernel=3, magThresh=(0, 255)):
     # Calculate gradient magnitude
-
-    # Convert to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
 
     # Take both Sobel x and y gradients
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
@@ -121,14 +111,9 @@ def magThresh(image, sobel_kernel=3, magThresh=(0, 255)):
 
     return mag_binary
 
-def dirThreshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
+# gray must be a 1 channel grayscale image
+def dirThreshold(gray, sobel_kernel=3, thresh=(0, np.pi/2)):
     # Calculate gradient direction
-
-    # Grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    gray = clahe.apply(gray)
 
     # Calculate the x and y gradients
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
@@ -200,13 +185,19 @@ def hsvThreshold(img, s_thresh=(170, 255), vsx_thresh=(9, 42)):
 def createThresholdedBinaryImage(image):
     # gradients on grayscale image
     ksize = 13
-    #TODO convert image to grayscale only once before calling thresholding functions
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+    # apply CLAHE
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    gray = clahe.apply(gray)
+
     # Apply each of the thresholding functions
-    gradx = absSobelThresh(image, orient='x', sobel_kernel=ksize, thresh=(23, 100))
-    grady = absSobelThresh(image, orient='y', sobel_kernel=ksize, thresh=(23, 100))
-    mag_binary = magThresh(image, sobel_kernel=ksize, magThresh=(70, 130))
+    gradx = absSobelThresh(gray, orient='x', sobel_kernel=ksize, thresh=(23, 100))
+    grady = absSobelThresh(gray, orient='y', sobel_kernel=ksize, thresh=(23, 100))
+    mag_binary = magThresh(gray, sobel_kernel=ksize, magThresh=(70, 130))
     #dir_binary = dirThreshold(image, sobel_kernel=ksize, thresh=(0, np.pi/2))
-    dir_binary = dirThreshold(image, sobel_kernel=15, thresh=(0.7, 1.2))
+    dir_binary = dirThreshold(gray, sobel_kernel=15, thresh=(0.7, 1.2))
 
     gray_combined = np.zeros_like(dir_binary)
     gray_combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
