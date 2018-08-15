@@ -5,7 +5,8 @@ import matplotlib.image as mpimg
 import glob
 
 #TODO introduce a commandline option
-DEBUG = True
+#DEBUG = True
+DEBUG = False
 
 def calibrateCamera():
 
@@ -247,7 +248,8 @@ def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
         plt.show()
 
     #TODO check if return of (x_max, y_max) makes sense here!
-    return M, (x_max, y_max)
+    #return M, (x_max, y_max)
+    return M
 
 
 def find_lane_pixels(binary_warped):
@@ -392,37 +394,64 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
     #FIXME fulfill this missing requirement
     ## Determine the curvature of the lane and vehicle position with respect to center.
 
-    #==========
-    #FIXME remove this suff
-    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(24, 9))
-    f.tight_layout()
+    if DEBUG:
+        #==========
+        #FIXME remove this suff
+        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(24, 9))
+        f.tight_layout()
 
-    ax1.imshow(image)
-    ax1.set_title('image', fontsize=15)
+        ax1.imshow(image)
+        ax1.set_title('image', fontsize=15)
 
-    ax2.imshow(binary_image)
-    ax2.set_title('binary_image', fontsize=15)
+        ax2.imshow(binary_image)
+        ax2.set_title('binary_image', fontsize=15)
 
-    ax3.imshow(binary_warped)
-    ax3.set_title('binary_warped', fontsize=15)
+        ax3.imshow(binary_warped)
+        ax3.set_title('binary_warped', fontsize=15)
 
-    ax4.plot(left_fitx, ploty, color='yellow')
-    ax4.plot(right_fitx, ploty, color='yellow')
-    ax4.imshow(out_image)
-    ax4.set_title('out_image', fontsize=15)
+        ax4.plot(left_fitx, ploty, color='yellow')
+        ax4.plot(right_fitx, ploty, color='yellow')
+        ax4.imshow(out_image)
+        ax4.set_title('out_image', fontsize=15)
 
-    plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 
-    #plt.imshow(binary_warped)
-    #plt.imshow(out_img)
+        #plt.imshow(binary_warped)
+        #plt.imshow(out_img)
 
+        plt.show()
+        #==========
+
+    return out_image, left_fitx, right_fitx, ploty
+
+
+def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(undist_image).astype(np.uint8)
+    #TODO find out how and when to use this approach
+    #color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+    color_warp = warp_zero
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(color_warp, transformationMatrix, (undist_image.shape[1], undist_image.shape[0]), flags=cv2.WARP_INVERSE_MAP)
+    # Combine the result with the original image
+    result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
+    plt.imshow(result)
     plt.show()
-    #==========
-
 
 def main():
     ## Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
+    print("calibrate camera...")
     ret, cameraMatrix, distortionCoeffs, rvecs, tvecs = calibrateCamera()
+    print("done.")
     
     if DEBUG:
         image = mpimg.imread('test_images/straight_lines1.jpg')
@@ -434,7 +463,8 @@ def main():
         mpimg.imsave('output_images/straight_lines2_undistorted.jpg', image)
 
     # calculate transformation matrix
-    transformationMatrix, image_size = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
+    #transformationMatrix, image_size = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
+    transformationMatrix = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
 
     # Make a list of calibration images
     images = glob.glob('test_images/test*.jpg')
@@ -442,11 +472,19 @@ def main():
     for index, filename in enumerate(images):
         image = mpimg.imread(filename)
         #gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        #TODO do i really need image_size here?
+        image_size = (image.shape[1], image.shape[0])
 
         if DEBUG:
             print("run pipeline on {}".format(filename))
 
-        pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
+        out_image, left_fitx, right_fitx, ploty = pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
+
+        undist_image = undistortImage(image, cameraMatrix, distortionCoeffs)
+        ## Warp the detected lane boundaries back onto the original image.
+        ## Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+        #FIXME add numerical estimations
+        drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix)
 
 if __name__ == "__main__":
     main()
