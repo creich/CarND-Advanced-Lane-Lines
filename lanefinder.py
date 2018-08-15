@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import glob
 
+# Import everything needed to edit/save/watch video clips
+from moviepy.editor import VideoFileClip
+
 #TODO introduce a commandline option
 #DEBUG = True
 DEBUG = False
@@ -456,10 +459,47 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
     newwarp = cv2.warpPerspective(color_warp, transformationMatrix, (undist_image.shape[1], undist_image.shape[0]), flags=cv2.WARP_INVERSE_MAP)
     # Combine the result with the original image
     result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
-    plt.imshow(result)
-    plt.show()
 
-def main():
+    return result
+
+def process_image(image):
+    # use global variable for simplicity reasons here
+    global cameraMatrix
+    global distortionCoeffs
+    global transformationMatrix
+
+    #gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    #TODO do i really need image_size here?
+    image_size = (image.shape[1], image.shape[0])
+
+    if DEBUG:
+        print("run pipeline on {}".format(filename))
+
+    out_image, left_fitx, right_fitx, ploty = pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
+
+    undist_image = undistortImage(image, cameraMatrix, distortionCoeffs)
+    ## Warp the detected lane boundaries back onto the original image.
+    ## Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+    #FIXME add numerical estimations
+    result = drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix)
+
+    if DEBUG:
+        plt.imshow(result)
+        plt.show()
+
+    return result
+    
+
+cameraMatrix = None
+distortionCoeffs = None
+transformationMatrix = None
+
+def prepare_globals():
+    # use global variable for simplicity reasons here
+    global cameraMatrix
+    global distortionCoeffs
+    global transformationMatrix
+
     ## Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
     print("calibrate camera...")
     ret, cameraMatrix, distortionCoeffs, rvecs, tvecs = calibrateCamera()
@@ -478,26 +518,30 @@ def main():
     #transformationMatrix, image_size = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
     transformationMatrix = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
 
+
+def single_image_main():
     # Make a list of calibration images
     images = glob.glob('test_images/test*.jpg')
 
     for index, filename in enumerate(images):
         image = mpimg.imread(filename)
-        #gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        #TODO do i really need image_size here?
-        image_size = (image.shape[1], image.shape[0])
 
-        if DEBUG:
-            print("run pipeline on {}".format(filename))
+        result = process_image(image)
+        plt.imshow(result)
+        plt.show()
 
-        out_image, left_fitx, right_fitx, ploty = pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
+def main():
+    video_out = 'video_out.mp4'
+    video_in = VideoFileClip('project_video.mp4')
 
-        undist_image = undistortImage(image, cameraMatrix, distortionCoeffs)
-        ## Warp the detected lane boundaries back onto the original image.
-        ## Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
-        #FIXME add numerical estimations
-        drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix)
+    print("processing video...")
+
+    video_clip = video_in.fl_image(process_image)
+    video_clip.write_videofile(video_out, audio=False)
 
 if __name__ == "__main__":
+    prepare_globals()
+
+    #single_image_main()
     main()
 
