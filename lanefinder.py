@@ -261,8 +261,9 @@ def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
 def find_lane_pixels(binary_warped):
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
-    # Create an output image to draw on and visualize the result
-    out_img = np.dstack((binary_warped, binary_warped, binary_warped))
+    if DEBUG:
+        # Create an output image to draw on and visualize the result
+        out_img = np.dstack((binary_warped, binary_warped, binary_warped))
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
     midpoint = np.int(histogram.shape[0]//2)
@@ -302,11 +303,12 @@ def find_lane_pixels(binary_warped):
         win_xright_low = rightx_current - margin  # Update this
         win_xright_high = rightx_current + margin  # Update this
 
-        # Draw the windows on the visualization image
-        cv2.rectangle(out_img,(win_xleft_low,win_y_low),
-        (win_xleft_high,win_y_high),(0, 1, 0), 3)
-        cv2.rectangle(out_img,(win_xright_low,win_y_low),
-        (win_xright_high,win_y_high),(0, 1, 0), 3)
+        if DEBUG:
+            # Draw the windows on the visualization image
+            cv2.rectangle(out_img,(win_xleft_low,win_y_low),
+            (win_xleft_high,win_y_high),(0, 1, 0), 3)
+            cv2.rectangle(out_img,(win_xright_low,win_y_low),
+            (win_xright_high,win_y_high),(0, 1, 0), 3)
 
         ### TO-DO: Identify the nonzero pixels in x and y within the window ###
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
@@ -342,44 +344,67 @@ def find_lane_pixels(binary_warped):
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
 
-    return leftx, lefty, rightx, righty, out_img
+    if DEBUG:
+        return leftx, lefty, rightx, righty, out_img
+
+    #TODO check if returning 'None' makes sense here
+    return leftx, lefty, rightx, righty, None
 
 
-def fit_polynomial(binary_warped):
-    # Find our lane pixels first
-    leftx, lefty, rightx, righty, out_img = find_lane_pixels(binary_warped)
+def fit_poly(img_shape, leftx, lefty, rightx, righty):
+    global left_fit
+    global right_fit
 
-    ### TO-DO: Fit a second order polynomial to each using `np.polyfit` ###
-    # why are x and y parameters swapped?
+    ### TO-DO: Fit a second order polynomial to each with np.polyfit() ###
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
-
     # Generate x and y values for plotting
-    ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0] )
-    try:
-        left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-        right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
-    except TypeError:
-        # Avoids an error if `left` and `right_fit` are still none or incorrect
-        print('The function failed to fit a line!')
-        left_fitx = 1*ploty**2 + 1*ploty
-        right_fitx = 1*ploty**2 + 1*ploty
+    ploty = np.linspace(0, img_shape[0]-1, img_shape[0])
+    ### TO-DO: Calc both polynomials using ploty, left_fit and right_fit ###
+    left_fitx = left_fit[0] * ploty**2  + left_fit[1] * ploty + left_fit[2]
+    right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
 
-    ## Visualization ##
-    # Colors in the left and right lane regions (1 on binary images whereas it should be 255 on colored images)
-    out_img[lefty, leftx] = [1, 0, 0]
-    out_img[righty, rightx] = [0, 0, 1]
+    return left_fitx, right_fitx, ploty
 
-    # Plots the left and right polynomials on the lane lines
-    #plt.plot(left_fitx, ploty, color='yellow')
-    #plt.plot(right_fitx, ploty, color='yellow')
+def search_around_poly(binary_warped):
+    global left_fit
+    global right_fit
 
-    #TODO draw lines into the image instead of returning line coordinates
-    return out_img, left_fitx, right_fitx, ploty
-    #return out_img
+    # HYPERPARAMETER
+    # Choose the width of the margin around the previous polynomial to search
+    # The quiz grader expects 100 here, but feel free to tune on your own!
+    margin = 32
 
+    # Grab activated pixels
+    nonzero = binary_warped.nonzero()
+    nonzeroy = np.array(nonzero[0])
+    nonzerox = np.array(nonzero[1])
+
+    ### TO-DO: Set the area of search based on activated x-values ###
+    ### within the +/- margin of our polynomial function ###
+    ### Hint: consider the window areas for the similarly named variables ###
+    ### in the previous quiz, but change the windows to our new search area ###
+    left_lane_inds = ((nonzerox > (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy +
+                    left_fit[2] - margin)) & (nonzerox < (left_fit[0]*(nonzeroy**2) +
+                    left_fit[1]*nonzeroy + left_fit[2] + margin)))
+    right_lane_inds = ((nonzerox > (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy +
+                    right_fit[2] - margin)) & (nonzerox < (right_fit[0]*(nonzeroy**2) +
+                    right_fit[1]*nonzeroy + right_fit[2] + margin)))
+
+    # Again, extract left and right line pixel positions
+    leftx = nonzerox[left_lane_inds]
+    lefty = nonzeroy[left_lane_inds]
+    rightx = nonzerox[right_lane_inds]
+    righty = nonzeroy[right_lane_inds]
+
+    return leftx, lefty, rightx, righty
+
+left_fit = None
+right_fit = None
 
 def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size):
+    global left_fit
+    global right_fit
 
     ## Apply a distortion correction to raw images.
     # first undistort all images to minimize camera effects on the image
@@ -393,9 +418,13 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
     binary_warped = cv2.warpPerspective(binary_image, transformationMatrix, image_size, flags=cv2.INTER_LINEAR)
 
     ## Detect lane pixels and fit to find the lane boundary.
-    #leftx, lefty, rightx, righty, out_image = find_lane_pixels(binary_warped)
-    out_image, left_fitx, right_fitx, ploty = fit_polynomial(binary_warped)
-    #out_image = fit_polynomial(binary_warped)
+    out_image = None
+    if (left_fit == None) or (right_fit == None):
+        leftx, lefty, rightx, righty, out_image = find_lane_pixels(binary_warped)
+    else:
+        leftx, lefty, rightx, righty = search_around_poly(binary_warped)
+
+    left_fitx, right_fitx, ploty = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
 
     #FIXME fulfill this missing requirement
     ## Determine the curvature of the lane and vehicle position with respect to center.
@@ -428,6 +457,7 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
         plt.show()
         #==========
 
+    # ATTENTION: out_image is 'None' if DEBUG == False
     return out_image, left_fitx, right_fitx, ploty
 
 
@@ -511,11 +541,19 @@ def prepare_globals():
 
 
 def single_image_main():
+    global left_fit
+    global right_fit
+
     # Make a list of calibration images
     images = glob.glob('test_images/test*.jpg')
 
     for index, filename in enumerate(images):
         image = mpimg.imread(filename)
+
+        # set left_fit and right_fit to None in single_image_mode to force sliding window on each image without
+        # 'remembering' anything from the previous image, since those are not related
+        left_fit = None
+        right_fit = None
 
         result = process_image(image)
         plt.imshow(result)
@@ -523,7 +561,8 @@ def single_image_main():
 
 def main():
     video_out = 'video_out.mp4'
-    video_in = VideoFileClip('project_video.mp4')
+    #video_in = VideoFileClip('project_video.mp4')
+    video_in = VideoFileClip('project_video_cut.mp4')
 
     print("processing video...")
 
@@ -533,6 +572,7 @@ def main():
 if __name__ == "__main__":
     prepare_globals()
 
+    #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
     #single_image_main()
     main()
 
