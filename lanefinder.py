@@ -358,6 +358,7 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     ### TO-DO: Fit a second order polynomial to each with np.polyfit() ###
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
+
     # Generate x and y values for plotting
     ploty = np.linspace(0, img_shape[0]-1, img_shape[0])
     ### TO-DO: Calc both polynomials using ploty, left_fit and right_fit ###
@@ -405,6 +406,9 @@ right_fit = None
 def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size):
     global left_fit
     global right_fit
+
+    if DEBUG:
+        global frame_count
 
     ## Apply a distortion correction to raw images.
     # first undistort all images to minimize camera effects on the image
@@ -454,14 +458,19 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
         #plt.imshow(binary_warped)
         #plt.imshow(out_img)
 
-        plt.show()
+        filename = 'output_images/debug/fig' + str(frame_count) + '.png'
+        plt.savefig(filename)
+        #plt.show()
         #==========
 
     # ATTENTION: out_image is 'None' if DEBUG == False
     return out_image, left_fitx, right_fitx, ploty
 
+frame_count = 0
 
 def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
+    global frame_count
+
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(undist_image).astype(np.uint8)
     #TODO find out how and when to use this approach
@@ -481,6 +490,9 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
     # Combine the result with the original image
     result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
 
+    cv2.putText(result, "frame: {}".format(frame_count), (420, 50), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255, 255, 255))
+    frame_count += 1
+
     return result
 
 def process_image(image):
@@ -493,9 +505,6 @@ def process_image(image):
     #TODO do i really need image_size here?
     image_size = (image.shape[1], image.shape[0])
 
-    if DEBUG:
-        print("run pipeline on {}".format(filename))
-
     out_image, left_fitx, right_fitx, ploty = pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
 
     undist_image = undistortImage(image, cameraMatrix, distortionCoeffs)
@@ -505,8 +514,12 @@ def process_image(image):
     result = drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix)
 
     if DEBUG:
+        global frame_count
+
         plt.imshow(result)
-        plt.show()
+        filename = 'output_images/debug/result' + str(frame_count) + '.png'
+        plt.savefig(filename)
+        #plt.show()
 
     return result
     
@@ -563,6 +576,7 @@ def main():
     video_out = 'video_out.mp4'
     #video_in = VideoFileClip('project_video.mp4')
     video_in = VideoFileClip('project_video_cut.mp4')
+    #TODO use video_in.subclip()
 
     print("processing video...")
 
@@ -573,6 +587,6 @@ if __name__ == "__main__":
     prepare_globals()
 
     #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
-    #single_image_main()
-    main()
+    single_image_main()
+    #main()
 
