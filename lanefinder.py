@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import glob
 
+import pickle
+
 # Import everything needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
 
@@ -11,60 +13,11 @@ from moviepy.editor import VideoFileClip
 #DEBUG = True
 DEBUG = False
 
-def calibrateCamera():
+# pickle file used for camera specifica
+PICKLE_FILE_NAME = 'camera_calibration_data.p'
 
-    ## find chessboard corners
-
-    # prepare object points
-    nx = 9# the number of inside corners in x
-    ny = 6# the number of inside corners in y
-
-    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(8,5,0)
-    objp = np.zeros((nx*ny,3), np.float32)
-    objp[:,:2] = np.mgrid[0:nx, 0:ny].T.reshape(-1,2)
-
-    # Arrays to store object points and image points from all the images.
-    objpoints = [] # 3d points in real world space
-    imgpoints = [] # 2d points in image plane.
-
-    # Make a list of calibration images
-    images = glob.glob('camera_cal/calibration*.jpg')
-
-    for index, filename in enumerate(images):
-        image = mpimg.imread(filename)
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        
-        if DEBUG:
-            print("find chessboard corners in: {} [which has the shape: {}]".format(filename, image.shape))
-        #NOTE some of the images have the shape (721, 1281, 3)! i guess it's small enough to NOT be a problem,
-        #     but we may have to rescale them later to get all images into the same shape, since cv2.calibrateCamera()
-        #     will get all points at once, while taking one image size as parameter
-
-        # Find the chessboard corners
-        ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
-    
-        # If found, draw corners
-        if ret == True:
-            objpoints.append(objp)
-            imgpoints.append(corners)
-
-            # Draw and display the corners
-            cv2.drawChessboardCorners(image, (nx, ny), corners, ret)
-            write_name = 'corners_found_' + str(index) + '.jpg'
-            cv2.imwrite('output_images/' + write_name, image)
-
-    # use the last image to get the shape/size of the images
-    #NOTE for some reason openCV puts y before x as output of image.shape, so x has index 1 instead of 0
-    imageSize = (image.shape[1], image.shape[0])
-    if DEBUG:
-        print(imageSize)
-
-    ## Do camera calibration given object points and image points
-    return cv2.calibrateCamera(objpoints, imgpoints, imageSize, None, None)
-
-
-def undistortImage(image, cameraMatrix, distortionCoeffs):
-    image = cv2.undistort(image, cameraMatrix, distortionCoeffs, None, cameraMatrix)
+def undistortImage(image, camera_matrix, distortion_coeffs):
+    image = cv2.undistort(image, camera_matrix, distortion_coeffs, None, camera_matrix)
     #TODO uncomment to save undistorted image
     #mpimg.imwrite('output_images/test_undist.jpg', image)
     return image
@@ -210,52 +163,6 @@ def createThresholdedBinaryImage(image):
     combined_binary[(gray_combined == 1) | ((hls_binary == 1) & (hsv_binary == 1))] = 1
 
     return combined_binary
-
-#TODO clean up! most stuff is not really needed here. only for debugging...
-def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
-    #                  top_left    top_right  bot_left    bot_right
-    # from undistorted straight_lines2
-    src = np.float32([[585, 460], [702, 460], [310, 660], [1000, 660]])
-    # from orig straight_lines1
-    #src = np.float32([[580, 460], [700, 460], [300, 660], [1000, 660]])
-    dst = np.float32([[400, 200], [900, 200], [400, 660], [900, 660]])
-    #dst = np.float32([[400, 460], [900, 460], [400, 660], [900, 660]])
-    # use cv2.getPerspectiveTransform() to get M, the transform matrix
-    M = cv2.getPerspectiveTransform(src, dst)
-
-    if DEBUG:
-        image = mpimg.imread('test_images/straight_lines1.jpg')
-        image = undistortImage(image, cameraMatrix, distortionCoeffs)
-
-        print(image.shape)
-        y_max, x_max = image.shape[0], image.shape[1]
-        warped = cv2.warpPerspective(image, M, (x_max, y_max), flags=cv2.INTER_LINEAR)
-
-        image2 = mpimg.imread('test_images/straight_lines2.jpg')
-        image2 = undistortImage(image2, cameraMatrix, distortionCoeffs)
-        warped2 = cv2.warpPerspective(image2, M, (x_max, y_max), flags=cv2.INTER_LINEAR)
-
-        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(24, 9))
-        f.tight_layout()
-
-        ax1.imshow(image)
-        ax1.set_title('image', fontsize=15)
-
-        ax2.imshow(image2)
-        ax2.set_title('image2', fontsize=15)
-
-        ax3.imshow(warped)
-        ax3.set_title('warped', fontsize=15)
-
-        ax4.imshow(warped2)
-        ax4.set_title('warped2', fontsize=15)
-
-        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-        plt.show()
-
-    #TODO check if return of (x_max, y_max) makes sense here!
-    #return M, (x_max, y_max)
-    return M
 
 
 def find_lane_pixels(binary_warped):
@@ -403,7 +310,7 @@ def search_around_poly(binary_warped):
 left_fit = None
 right_fit = None
 
-def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size):
+def pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, image_size):
     global left_fit
     global right_fit
 
@@ -412,14 +319,14 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
 
     ## Apply a distortion correction to raw images.
     # first undistort all images to minimize camera effects on the image
-    image = undistortImage(image, cameraMatrix, distortionCoeffs)
+    image = undistortImage(image, camera_matrix, distortion_coeffs)
 
     ## Use color transforms, gradients, etc., to create a thresholded binary image.
     #TODO crop image first, to save computation power
     binary_image = createThresholdedBinaryImage(image)
 
     ## Apply a perspective transform to rectify binary image ("birds-eye view").
-    binary_warped = cv2.warpPerspective(binary_image, transformationMatrix, image_size, flags=cv2.INTER_LINEAR)
+    binary_warped = cv2.warpPerspective(binary_image, transformation_matrix, image_size, flags=cv2.INTER_LINEAR)
 
     ## Detect lane pixels and fit to find the lane boundary.
     out_image = None
@@ -468,7 +375,7 @@ def pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_
 
 frame_count = 0
 
-def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
+def drawing(undist_image, left_fitx, right_fitx, ploty, transformation_matrix):
     global frame_count
 
     # Create an image to draw the lines on
@@ -486,7 +393,7 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
     cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
 
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
-    newwarp = cv2.warpPerspective(color_warp, transformationMatrix, (undist_image.shape[1], undist_image.shape[0]), flags=cv2.WARP_INVERSE_MAP)
+    newwarp = cv2.warpPerspective(color_warp, transformation_matrix, (undist_image.shape[1], undist_image.shape[0]), flags=cv2.WARP_INVERSE_MAP)
     # Combine the result with the original image
     result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
 
@@ -497,21 +404,18 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix):
 
 def process_image(image):
     # use global variable for simplicity reasons here
-    global cameraMatrix
-    global distortionCoeffs
-    global transformationMatrix
+    global camera_matrix
+    global distortion_coeffs
+    global transformation_matrix
+    global image_size
 
-    #gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    #TODO do i really need image_size here?
-    image_size = (image.shape[1], image.shape[0])
+    out_image, left_fitx, right_fitx, ploty = pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, image_size)
 
-    out_image, left_fitx, right_fitx, ploty = pipeline(image, cameraMatrix, distortionCoeffs, transformationMatrix, image_size)
-
-    undist_image = undistortImage(image, cameraMatrix, distortionCoeffs)
+    undist_image = undistortImage(image, camera_matrix, distortion_coeffs)
     ## Warp the detected lane boundaries back onto the original image.
     ## Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
     #FIXME add numerical estimations
-    result = drawing(undist_image, left_fitx, right_fitx, ploty, transformationMatrix)
+    result = drawing(undist_image, left_fitx, right_fitx, ploty, transformation_matrix)
 
     if DEBUG:
         global frame_count
@@ -524,33 +428,24 @@ def process_image(image):
     return result
     
 
-cameraMatrix = None
-distortionCoeffs = None
-transformationMatrix = None
+camera_matrix = None
+distortion_coeffs = None
+transformation_matrix = None
+image_size = None
 
 def prepare_globals():
     # use global variable for simplicity reasons here
-    global cameraMatrix
-    global distortionCoeffs
-    global transformationMatrix
+    global camera_matrix
+    global distortion_coeffs
+    global transformation_matrix
+    global image_size
 
-    ## Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-    print("calibrate camera...")
-    ret, cameraMatrix, distortionCoeffs, rvecs, tvecs = calibrateCamera()
-    print("done.")
-    
-    if DEBUG:
-        image = mpimg.imread('test_images/straight_lines1.jpg')
-        image = undistortImage(image, cameraMatrix, distortionCoeffs)
-        mpimg.imsave('output_images/straight_lines1_undistorted.jpg', image)
-
-        image = mpimg.imread('test_images/straight_lines2.jpg')
-        image = undistortImage(image, cameraMatrix, distortionCoeffs)
-        mpimg.imsave('output_images/straight_lines2_undistorted.jpg', image)
-
-    # calculate transformation matrix
-    #transformationMatrix, image_size = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
-    transformationMatrix = calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs)
+    with open(PICKLE_FILE_NAME, 'rb') as f:
+        calibration_data = pickle.load(f)
+    camera_matrix = calibration_data["camera_matrix"]
+    distortion_coeffs = calibration_data["distortion_coeffs"]
+    transformation_matrix = calibration_data["transformation_matrix"]
+    image_size = calibration_data["image_size"]
 
 
 def single_image_main():
