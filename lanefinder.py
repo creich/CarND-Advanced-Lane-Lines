@@ -135,6 +135,22 @@ def hsvThreshold(img, s_thresh=(170, 255), vsx_thresh=(9, 42)):
 
     return s_sx_binary
 
+# special thanks to gpavlov2016
+# https://github.com/gpavlov2016/CarND-Advanced-Lane-Lines/blob/master/utils.py
+# Define a function that thresholds the S-channel of HLS
+def select_white_and_yellow(img):
+    # 1) Convert to HLS color space
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    #Filter out all colors except yellow and white:
+    lower_yellow = np.array([0, 0, 40])
+    upper_yellow = np.array([100, 255, 255])
+    lower_white = np.array([0, 160, 0])
+    upper_white = np.array([255, 255, 255])
+    ymask = cv2.inRange(hls, lower_yellow, upper_yellow)
+    wmask = cv2.inRange(hls, lower_white, upper_white)
+    mask = np.logical_or(ymask, wmask)
+    return mask
+
 def createThresholdedBinaryImage(image):
     # gradients on grayscale image
     ksize = 13
@@ -153,14 +169,69 @@ def createThresholdedBinaryImage(image):
     dir_binary = dirThreshold(gray, sobel_kernel=15, thresh=(0.7, 1.2))
 
     gray_combined = np.zeros_like(dir_binary)
-    gray_combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+    #gray_combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
+    gray_combined[((gradx == 1) & (grady == 1)) | (mag_binary == 1)] = 1
 
     # gradients on different color spaces
     hls_binary = hlsThreshold(image, s_thresh=(170, 255), sx_thresh=(15, 70))
     hsv_binary = hsvThreshold(image, s_thresh=(170, 255), vsx_thresh=(9, 42))
 
     combined_binary = np.zeros_like(gray_combined)
-    combined_binary[(gray_combined == 1) | ((hls_binary == 1) & (hsv_binary == 1))] = 1
+    #combined_binary[(gray_combined == 1) | ((hls_binary == 1) & (hsv_binary == 1))] = 1
+    #combined_binary[(gray_combined == 1) | (hls_binary == 1)] = 1
+
+    white_yellow = select_white_and_yellow(image)
+    combined_binary[((gray_combined == 1) | (hls_binary == 1)) & (white_yellow == 1)] = 1
+
+    if DEBUG:
+        #==========
+        #FIXME remove this suff
+        f, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8), (ax9, ax10, ax11, ax12)) = plt.subplots(3, 4, figsize=(24, 9))
+        f.tight_layout()
+
+        ax1.imshow(gradx)
+        ax1.set_title('gradx', fontsize=15)
+
+        ax2.imshow(grady)
+        ax2.set_title('grady', fontsize=15)
+
+        ax3.imshow(mag_binary)
+        ax3.set_title('mag_binary', fontsize=15)
+
+        ax4.imshow(dir_binary)
+        ax4.set_title('dir_binary', fontsize=15)
+
+        ax5.imshow(gray_combined)
+        ax5.set_title('gray_combined', fontsize=15)
+
+        ax6.imshow(hls_binary)
+        ax6.set_title('hls_binry', fontsize=15)
+
+        ax7.imshow(hsv_binary)
+        ax7.set_title('hsv_binary', fontsize=15)
+
+        ax8.imshow(combined_binary)
+        ax8.set_title('combined_binary', fontsize=15)
+
+        ax9.imshow(white_yellow)
+        ax9.set_title('white_yellow', fontsize=15)
+
+        #ax9.imshow(scaled_sobel)
+        #ax9.set_title('scaled_sobel', fontsize=15)
+
+        #ax10.imshow(scaled_sobel_combined)
+        #ax10.set_title('scaled_sobel_combined', fontsize=15)
+
+        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
+
+        #plt.imshow(binary_warped)
+        #plt.imshow(out_img)
+
+        filename = 'output_images/debug/thresholdedBinaryImage' + str(frame_count) + '.png'
+        plt.savefig(filename)
+        plt.close()
+        #==========
+
 
     return combined_binary
 
@@ -171,6 +242,13 @@ def find_lane_pixels(binary_warped):
     if DEBUG:
         # Create an output image to draw on and visualize the result
         out_img = np.dstack((binary_warped, binary_warped, binary_warped))
+
+        plt.imshow(histogram)
+        filename = 'output_images/debug/histogram' + str(frame_count) + '.png'
+        plt.savefig(filename)
+        plt.close()
+
+
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
     midpoint = np.int(histogram.shape[0]//2)
@@ -181,7 +259,7 @@ def find_lane_pixels(binary_warped):
     # Choose the number of sliding windows
     nwindows = 9
     # Set the width of the windows +/- margin
-    margin = 70
+    margin = 60
     # Set minimum number of pixels found to recenter window
     minpix = 50
 
@@ -281,7 +359,7 @@ def search_around_poly(binary_warped):
     # HYPERPARAMETER
     # Choose the width of the margin around the previous polynomial to search
     # The quiz grader expects 100 here, but feel free to tune on your own!
-    margin = 32
+    margin = 42
 
     # Grab activated pixels
     nonzero = binary_warped.nonzero()
@@ -305,7 +383,47 @@ def search_around_poly(binary_warped):
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
 
-    return leftx, lefty, rightx, righty
+    out_img = None
+    if DEBUG:
+        ## Visualization ##
+        # Create an image to draw on and an image to show the selection window
+        #out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
+        out_img = np.dstack((binary_warped, binary_warped, binary_warped))
+        window_img = np.zeros_like(out_img)
+        # Color in left and right line pixels
+        #out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+        #out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [1, 0, 0]
+        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 1]
+
+        # Fit new polynomials
+        left_fitx, right_fitx, ploty = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+
+        # Generate a polygon to illustrate the search window area
+        # And recast the x and y points into usable format for cv2.fillPoly()
+        left_line_window1 = np.array([np.transpose(np.vstack([left_fitx-margin, ploty]))])
+        left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fitx+margin,
+                                  ploty])))])
+        left_line_pts = np.hstack((left_line_window1, left_line_window2))
+        right_line_window1 = np.array([np.transpose(np.vstack([right_fitx-margin, ploty]))])
+        right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+margin,
+                                  ploty])))])
+        right_line_pts = np.hstack((right_line_window1, right_line_window2))
+
+        # Draw the lane onto the warped blank image
+        #cv2.fillPoly(window_img, np.int_([left_line_pts]), (0,255, 0))
+        #cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
+        cv2.fillPoly(window_img, np.int_([left_line_pts]), (0, 1, 0))
+        cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 1, 0))
+        result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+
+        # Plot the polynomial lines onto the image
+        plt.plot(left_fitx, ploty, color='yellow')
+        plt.plot(right_fitx, ploty, color='yellow')
+        ## End visualization steps ##
+
+
+    return leftx, lefty, rightx, righty, out_img
 
 left_fit = None
 right_fit = None
@@ -333,7 +451,7 @@ def pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, ima
     if (left_fit == None) or (right_fit == None):
         leftx, lefty, rightx, righty, out_image = find_lane_pixels(binary_warped)
     else:
-        leftx, lefty, rightx, righty = search_around_poly(binary_warped)
+        leftx, lefty, rightx, righty, out_image = search_around_poly(binary_warped)
 
     left_fitx, right_fitx, ploty = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
 
@@ -367,7 +485,7 @@ def pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, ima
 
         filename = 'output_images/debug/fig' + str(frame_count) + '.png'
         plt.savefig(filename)
-        #plt.show()
+        plt.close()
         #==========
 
     # ATTENTION: out_image is 'None' if DEBUG == False
@@ -429,7 +547,7 @@ def process_image(image):
         plt.imshow(result)
         filename = 'output_images/debug/result' + str(frame_count) + '.png'
         plt.savefig(filename)
-        #plt.show()
+        plt.close()
 
     return result
 
@@ -479,7 +597,8 @@ def single_image_main():
 
     # Make a list of calibration images
     #images = glob.glob('test_images/test*.jpg')
-    images = glob.glob('test_images/test4*.jpg')
+    images = glob.glob('test_images/test1*.jpg')
+    #images = glob.glob('test_images/test4*.jpg')
 
     for index, filename in enumerate(images):
         image = mpimg.imread(filename)
@@ -495,9 +614,9 @@ def single_image_main():
 
 def main():
     video_out = 'video_out.mp4'
-    #video_in = VideoFileClip('project_video.mp4')
-    video_in = VideoFileClip('project_video_cut.mp4')
-    #TODO use video_in.subclip()
+    video_in = VideoFileClip('project_video.mp4')
+    #video_in = VideoFileClip('project_video_cut.mp4')
+    #video_in = video_in.subclip(1.3, 3.3)
 
     print("processing video...")
 
@@ -508,6 +627,6 @@ if __name__ == "__main__":
     prepare_globals()
 
     #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
-    single_image_main()
-    #main()
+    #single_image_main()
+    main()
 
