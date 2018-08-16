@@ -397,7 +397,13 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformation_matrix):
     # Combine the result with the original image
     result = cv2.addWeighted(undist_image, 1, newwarp, 0.3, 0)
 
-    cv2.putText(result, "frame: {}".format(frame_count), (420, 50), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(255, 255, 255))
+    ## add some text to the images
+    left_curverad, right_curverad = measure_curvature_pixels(ploty, left_fitx, right_fitx)
+
+    text_color = (255, 255, 0)
+    cv2.putText(result, "frame: {}".format(frame_count), (100, 50), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
+    cv2.putText(result, "left_curverad: {} m".format(left_curverad), (100, 65), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
+    cv2.putText(result, "right_curverad: {} m".format(right_curverad), (100, 80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
     frame_count += 1
 
     return result
@@ -426,7 +432,26 @@ def process_image(image):
         #plt.show()
 
     return result
-    
+
+
+def measure_curvature_pixels(ploty, left_fitx, right_fitx):
+    '''
+    Calculates the curvature of polynomial functions in pixels.
+    '''
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+    # Define y-value where we want radius of curvature
+    # We'll choose the maximum y-value, corresponding to the bottom of the image
+    y_eval = np.max(ploty)
+
+    ##### TO-DO: Implement the calculation of R_curve (radius of curvature) #####
+    left_curverad = ((1+(2*left_fit[0]*y_eval*ym_per_pix+left_fit[1])**2)**(3/2) ) / np.absolute(2*left_fit[0])  ## Implement the calculation of the left line here
+    right_curverad = ((1+(2*right_fit[0]*y_eval*xm_per_pix+right_fit[1])**2)**(3/2) ) / np.absolute(2*right_fit[0])  ## Implement the calculation of the right line here
+
+    return left_curverad, right_curverad
+
 
 camera_matrix = None
 distortion_coeffs = None
@@ -453,7 +478,8 @@ def single_image_main():
     global right_fit
 
     # Make a list of calibration images
-    images = glob.glob('test_images/test*.jpg')
+    #images = glob.glob('test_images/test*.jpg')
+    images = glob.glob('test_images/test4*.jpg')
 
     for index, filename in enumerate(images):
         image = mpimg.imread(filename)
