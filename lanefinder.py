@@ -336,9 +336,16 @@ def find_lane_pixels(binary_warped):
     return leftx, lefty, rightx, righty, None
 
 
+HIST_SIZE = 15
+left_fitx_hist = None
+right_fitx_hist = None
+hist_weight = np.linspace(0, 1, HIST_SIZE)
+
 def fit_poly(img_shape, leftx, lefty, rightx, righty):
     global left_fit
     global right_fit
+    global left_fitx_hist
+    global right_fitx_hist
 
     ### TO-DO: Fit a second order polynomial to each with np.polyfit() ###
     left_fit = np.polyfit(lefty, leftx, 2)
@@ -349,6 +356,17 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     ### TO-DO: Calc both polynomials using ploty, left_fit and right_fit ###
     left_fitx = left_fit[0] * ploty**2  + left_fit[1] * ploty + left_fit[2]
     right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
+
+    if left_fitx_hist is None:
+        left_fitx_hist = np.repeat([left_fitx], HIST_SIZE, axis=0)
+    if right_fitx_hist is None:
+        right_fitx_hist = np.repeat([right_fitx], HIST_SIZE, axis=0)
+
+    left_fitx_hist = np.vstack([left_fitx_hist, left_fitx])[1:]
+    left_fitx = np.average(left_fitx_hist, axis=0, weights=range(1, 1 + HIST_SIZE))
+
+    right_fitx_hist = np.vstack([right_fitx_hist, right_fitx])[1:]
+    right_fitx = np.average(right_fitx_hist, axis=0, weights=range(1, 1 + HIST_SIZE))
 
     return left_fitx, right_fitx, ploty
 
@@ -622,6 +640,7 @@ def main():
 
     video_clip = video_in.fl_image(process_image)
     video_clip.write_videofile(video_out, audio=False)
+
 
 if __name__ == "__main__":
     prepare_globals()
