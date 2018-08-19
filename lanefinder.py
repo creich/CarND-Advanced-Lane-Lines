@@ -362,6 +362,21 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     if right_fitx_hist is None:
         right_fitx_hist = np.repeat([right_fitx], HIST_SIZE, axis=0)
 
+    #======
+    # limit pixel movement
+
+    left_hist_average = np.average(left_fitx_hist, axis=0, weights=range(1, 1 + HIST_SIZE))
+
+    MAX_DISTANCE = 23
+    m_distance = (np.abs(left_fitx - left_hist_average) > MAX_DISTANCE)
+    m_smaller = (left_fitx - left_hist_average) < 0
+    m_greater = (left_fitx - left_hist_average) > 0
+
+    left_fitx[m_distance & m_smaller] = left_hist_average[m_distance & m_smaller] - MAX_DISTANCE
+    left_fitx[m_distance & m_greater] = left_hist_average[m_distance & m_greater] + MAX_DISTANCE
+
+    #=======
+
     left_fitx_hist = np.vstack([left_fitx_hist, left_fitx])[1:]
     left_fitx = np.average(left_fitx_hist, axis=0, weights=range(1, 1 + HIST_SIZE))
 
