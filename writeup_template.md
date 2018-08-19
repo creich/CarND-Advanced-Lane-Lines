@@ -63,13 +63,38 @@ Finally the output `objpoints` and `imgpoints` are used to compute the camera ca
 #### 1. Provide an example of a distortion-corrected image.
 
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+
+![image2]
+![image3]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+The code for creating a binary thresholded image can be found in `lanefinder.py -> function: create_thresholded_binary_image()` (line #154 - #236).
+I used the colored image as well as a grayscale version of it to generate several gradient thresholds. on the grayscale image i applied an CLAHE upfront, since i achived good results with it on the traffic sign project.
 
-![alt text][image3]
+| function applied         		|     parameters	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| thresholded absolute sobel in x direction		|  sobel_kernel = 13, thresh = (23, 100) | 
+| thresholded absolute sobel in y direction		|  sobel_kernel = 13, thresh = (23, 100) | 
+| thresholded magnitude of gradient		|  sobel_kernel = 13, thresh = (70, 130) | 
+| thresholded direction of gradient		|  sobel_kernel = 15, thresh = (0.7, 1.2) | 
+
+I combined the first three using a binary AND between x- and y- gradient combined through a binary OR on magnitude gradient (line #173). the direction gradient did not help me very much in the end.
+
+then i applied some gradient combinations on different colorspaces HLS and HSV.
+
+| function applied         		|     parameters	        					| 
+|:---------------------:|:---------------------------------------------:| 
+| thresholded absolute sobel in x-direction on L-channel combined with an thresholded saturation channel (S-channel) in HLS color space |  sobel_kernel = 3, color_thresh=(170, 255), gradient_thresh=(15, 70)  | 
+| thresholded absolute sobel in x-direction on V-channel combined with an thresholded saturation channel (S-channel) in HSV color space |  sobel_kernel = 3, color_thresh=(170, 255), gradient_thresh=(9, 42)  | 
+
+additionally i also tried to filter stronger for the white and yellow parts of the image. therefor i applied a filter on the HLS colorspace. (line #183)
+
+Finally i combined the gray-binary from the first step and the HLS binary images using a logical OR and combined that with the white-yellow-filter using and AND. (code line #184). The HSV binary image i didn't use in the end.
+
+here you can see the intermediate images of a sample frame:
+
+![image7]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
