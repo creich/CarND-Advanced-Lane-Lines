@@ -45,7 +45,7 @@ You're reading it!
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the file named `calibrate_camera.py` (lines 12 - 61).
+The code for this step is contained in the file named `calibrate_camera.py` (lines #13 - #62 --> function calibrate_camera).
 
 basically i followed the 'default' procedure to calibrate a camera using opencv. that means, take several images of a predefined chesboard pattern from different angels and distances. then go through all those images and extract the chessboard corners (in this case there are 9 corners on the X-axis and 6 on the Y-axis) using cv2.findChessboardCorners().
 
@@ -100,33 +100,28 @@ here you can see the intermediate images of a sample frame:
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+for the code to calulcate the perspectice transformation matrix, please check the function `calc_perspactive_transform_matrix` (lines #64 - #77 in `calibrate_camera.py`)
+
+i manually extracted the source ann destination points from undistorted version of the test_image straight_lines2.jpg which i hardcoded
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+    src = np.float32([[585, 460], [702, 460], [310, 660], [1000, 660]])
+    dst = np.float32([[400, 200], [900, 200], [400, 660], [900, 660]])
+    M = cv2.getPerspectiveTransform(src, dst)
 ```
 
 This resulted in the following source and destination points:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 585, 460      | 400, 200      | 
+| 702, 460      | 900, 200      |
+| 310, 660      | 400, 660      |
+| 1000, 660     | 900, 660      |
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+I verified that my perspective transform was working as expected by comparing an normal image and its warped counter part. i choose an image of a straight road, to make visual comparisson easy. expectation is that the lines of the road become as parallel as possible.
 
-![alt text][image4]
+![image6]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
