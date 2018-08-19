@@ -169,4 +169,8 @@ Here's a [link to my video result](./video_out.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+the main problems occured to me on different light situations or shadows within the images. also differences within the road color (the light road part) have been problematic. so it would definitely be necessary to investigate images with different weather conditions. e.g. cloudy weatcher, less sun, maybe some rain, or even night! all thos things are not clearly investigated so far.
+
+especially for the light road part, i got some trouble with jumping lane borders, which i compensated for now through some really simple averaging over some history values of found lanes during within former frames. even though this part is working for the video, it won't work for some real life application. you mentioend some kind of lane class including more date besides simple pixel history. e.g. the confidence i have in the found lane lines. that would definitly be a part to put more effort into!
+
+overall, like in all the other projects, i really learned a lot so far and will definitly investigate further! those projects are a perfect starting point. maybe i'll start collecting some real world images on my own to investigate more specific situations. i'll also try to takle the more challanging videos in the future :)
