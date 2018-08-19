@@ -142,17 +142,18 @@ the second version is called `search_around_poly` and can be found at code line 
 see the following images for visualization:
 
 ![image8]
-![image9]
+
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in lines #574 through #603 in my code in `lanefinder.py`. there are two functions named ` measure_distance_to_lane_center` and `measure_curvature_pixels`.
+
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines #513++ in my code in `lanefinde.py` in the function `drawing()`.  Here is an example of my result on a test image:
 
-![alt text][image6]
+![image9]
 
 ---
 
@@ -160,7 +161,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./video_out.mp4)
 
 ---
 
