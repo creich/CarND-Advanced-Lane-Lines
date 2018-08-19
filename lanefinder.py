@@ -661,6 +661,6 @@ if __name__ == "__main__":
     prepare_globals()
 
     #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
-    single_image_main()
-    #main()
+    #single_image_main()
+    main()
 
