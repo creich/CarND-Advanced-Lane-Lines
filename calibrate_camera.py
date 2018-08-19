@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
 import pickle
 
@@ -103,10 +104,17 @@ def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
         ax4.set_title('warped2', fontsize=15)
 
         plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-        plt.show()
+
+        plt.savefig('output_images/warped_straight_lines2.jpg')
+        plt.close()
 
     return M, (x_max, y_max)
 
+def undistortImage(image, camera_matrix, distortion_coeffs):
+    image = cv2.undistort(image, camera_matrix, distortion_coeffs, None, camera_matrix)
+    #TODO uncomment to save undistorted image
+    #mpimg.imwrite('output_images/test_undist.jpg', image)
+    return image
 
 
 ## Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
@@ -116,12 +124,19 @@ print("done.")
 
 if DEBUG:
     image = mpimg.imread('test_images/straight_lines1.jpg')
-    image = undistortImage(image, cameraMatrix, distortionCoeffs)
+    mpimg.imsave('output_images/straight_lines1_distorted.jpg', image)
+    image = undistortImage(image, camera_matrix, distortion_coeffs)
     mpimg.imsave('output_images/straight_lines1_undistorted.jpg', image)
 
     image = mpimg.imread('test_images/straight_lines2.jpg')
-    image = undistortImage(image, cameraMatrix, distortionCoeffs)
+    mpimg.imsave('output_images/straight_lines2_distorted.jpg', image)
+    image = undistortImage(image, camera_matrix, distortion_coeffs)
     mpimg.imsave('output_images/straight_lines2_undistorted.jpg', image)
+
+    image = mpimg.imread('camera_cal/calibration1.jpg')
+    mpimg.imsave('output_images/calibration1_distorted.jpg', image)
+    image = undistortImage(image, camera_matrix, distortion_coeffs)
+    mpimg.imsave('output_images/calibration1_undistorted.jpg', image)
 
 # calculate transformation matrix
 transformation_matrix, image_size = calcPerspactiveTransformMatrix(camera_matrix, distortion_coeffs)
