@@ -102,8 +102,6 @@ def calc_perspactive_transform_matrix(cameraMatrix, distortionCoeffs):
         ax4.imshow(warped2)
         ax4.set_title('warped2', fontsize=15)
 
-        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-
         plt.savefig('output_images/warped_straight_lines2.jpg')
         plt.close()
 
