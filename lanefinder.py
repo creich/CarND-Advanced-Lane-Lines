@@ -647,7 +647,7 @@ def single_image_main():
 def main():
     video_out = 'video_out.mp4'
     video_in = VideoFileClip('project_video.mp4')
-    video_in = video_in.subclip(23, 27)
+    #video_in = video_in.subclip(23, 27)
     #video_in = VideoFileClip('project_video_cut.mp4')
     #video_in = video_in.subclip(1.3, 3.3)
 
@@ -661,6 +661,6 @@ if __name__ == "__main__":
     prepare_globals()
 
     #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
-    single_image_main()
-    #main()
+    #single_image_main()
+    main()
 
