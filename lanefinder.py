@@ -216,17 +216,6 @@ def create_thresholded_binary_image(image):
         ax9.imshow(white_yellow)
         ax9.set_title('white_yellow', fontsize=15)
 
-        #ax9.imshow(scaled_sobel)
-        #ax9.set_title('scaled_sobel', fontsize=15)
-
-        #ax10.imshow(scaled_sobel_combined)
-        #ax10.set_title('scaled_sobel_combined', fontsize=15)
-
-        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-
-        #plt.imshow(binary_warped)
-        #plt.imshow(out_img)
-
         filename = 'output_images/debug/thresholdedBinaryImage' + str(frame_count) + '.png'
         plt.savefig(filename)
         plt.close()
@@ -511,11 +500,6 @@ def pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, ima
         ax4.imshow(out_image)
         ax4.set_title('out_image', fontsize=15)
 
-        plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-
-        #plt.imshow(binary_warped)
-        #plt.imshow(out_img)
-
         filename = 'output_images/debug/fig' + str(frame_count) + '.png'
         plt.savefig(filename)
         plt.close()
@@ -550,11 +534,13 @@ def drawing(undist_image, left_fitx, right_fitx, ploty, transformation_matrix):
 
     ## add some text to the images
     left_curverad, right_curverad = measure_curvature_pixels(ploty, left_fitx, right_fitx)
+    lane_offset = measure_distance_to_lane_center(undist_image.shape[1], left_fitx, right_fitx)
 
     text_color = (255, 255, 0)
     cv2.putText(result, "frame: {}".format(frame_count), (100, 50), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
-    cv2.putText(result, "left_curverad: {} m".format(left_curverad), (100, 65), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
-    cv2.putText(result, "right_curverad: {} m".format(right_curverad), (100, 80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
+    cv2.putText(result, "left_curverad: {:.2f} m".format(left_curverad), (100, 65), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
+    cv2.putText(result, "right_curverad: {:.2f} m".format(right_curverad), (100, 80), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
+    cv2.putText(result, "offset to lane center: {:.5f} m".format(lane_offset), (100, 95), cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=text_color)
     frame_count += 1
 
     return result
@@ -585,13 +571,26 @@ def process_image(image):
     return result
 
 
+def measure_distance_to_lane_center(image_width, left_fitx, right_fitx):
+    xm_per_pix = 3.7/550 # meters per pixel in x dimension
+
+    center_of_image = (image_width // 2)
+    #calculate the lane center in pixels
+    lx_right = right_fitx[-1]
+    lx_left  = left_fitx[-1]
+
+    lane_center = lx_left + (lx_right - lx_left) // 2
+    #calculate the offset in m for displaying on the image
+    return (center_of_image - lane_center) * xm_per_pix
+
+
 def measure_curvature_pixels(ploty, left_fitx, right_fitx):
     '''
     Calculates the curvature of polynomial functions in pixels.
     '''
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30/720 # meters per pixel in y dimension
-    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    xm_per_pix = 3.7/550 # meters per pixel in x dimension
 
     # Define y-value where we want radius of curvature
     # We'll choose the maximum y-value, corresponding to the bottom of the image
@@ -662,6 +661,6 @@ if __name__ == "__main__":
     prepare_globals()
 
     #FIXME in single_image_mode we have to deactivate the reuse of prior left_fit and right_fit polynoms!
-    #single_image_main()
-    main()
+    single_image_main()
+    #main()
 
