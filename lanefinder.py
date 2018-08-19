@@ -16,7 +16,7 @@ DEBUG = False
 # pickle file used for camera specifica
 PICKLE_FILE_NAME = 'camera_calibration_data.p'
 
-def undistortImage(image, camera_matrix, distortion_coeffs):
+def undistort_image(image, camera_matrix, distortion_coeffs):
     image = cv2.undistort(image, camera_matrix, distortion_coeffs, None, camera_matrix)
     #TODO uncomment to save undistorted image
     #mpimg.imwrite('output_images/test_undist.jpg', image)
@@ -24,7 +24,7 @@ def undistortImage(image, camera_matrix, distortion_coeffs):
 
 
 # gray must be a 1 channel grayscale image
-def absSobelThresh(gray, orient='x', sobel_kernel=3, thresh=(0, 255)):
+def abs_sobel_thresh(gray, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Calculate directional gradient
 
     # Apply x or y gradient with the OpenCV Sobel() function
@@ -45,7 +45,7 @@ def absSobelThresh(gray, orient='x', sobel_kernel=3, thresh=(0, 255)):
     return grad_binary
 
 # gray must be a 1 channel grayscale image
-def magThresh(gray, sobel_kernel=3, magThresh=(0, 255)):
+def mag_thresh(gray, sobel_kernel=3, mag_thresh=(0, 255)):
     # Calculate gradient magnitude
 
     # Take both Sobel x and y gradients
@@ -60,12 +60,12 @@ def magThresh(gray, sobel_kernel=3, magThresh=(0, 255)):
     # Apply threshold
     # Create a binary image of ones where threshold is met, zeros otherwise
     mag_binary = np.zeros_like(gradmag)
-    mag_binary[(gradmag >= magThresh[0]) & (gradmag <= magThresh[1])] = 1
+    mag_binary[(gradmag >= mag_thresh[0]) & (gradmag <= mag_thresh[1])] = 1
 
     return mag_binary
 
 # gray must be a 1 channel grayscale image
-def dirThreshold(gray, sobel_kernel=3, thresh=(0, np.pi/2)):
+def dir_threshold(gray, sobel_kernel=3, thresh=(0, np.pi/2)):
     # Calculate gradient direction
 
     # Calculate the x and y gradients
@@ -81,7 +81,7 @@ def dirThreshold(gray, sobel_kernel=3, thresh=(0, np.pi/2)):
 
     return dir_binary
 
-def hlsThreshold(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
+def hls_threshold(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
     img = np.copy(img)
 
     # Convert to HLS color space and separate the V channel
@@ -108,7 +108,7 @@ def hlsThreshold(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
 
     return s_sx_binary
 
-def hsvThreshold(img, s_thresh=(170, 255), vsx_thresh=(9, 42)):
+def hsv_threshold(img, s_thresh=(170, 255), vsx_thresh=(9, 42)):
     img = np.copy(img)
 
     # Convert to HLS color space and separate the V channel
@@ -151,7 +151,7 @@ def select_white_and_yellow(img):
     mask = np.logical_or(ymask, wmask)
     return mask
 
-def createThresholdedBinaryImage(image):
+def create_thresholded_binary_image(image):
     # gradients on grayscale image
     ksize = 13
     # Convert to grayscale
@@ -162,19 +162,19 @@ def createThresholdedBinaryImage(image):
     gray = clahe.apply(gray)
 
     # Apply each of the thresholding functions
-    gradx = absSobelThresh(gray, orient='x', sobel_kernel=ksize, thresh=(23, 100))
-    grady = absSobelThresh(gray, orient='y', sobel_kernel=ksize, thresh=(23, 100))
-    mag_binary = magThresh(gray, sobel_kernel=ksize, magThresh=(70, 130))
-    #dir_binary = dirThreshold(image, sobel_kernel=ksize, thresh=(0, np.pi/2))
-    dir_binary = dirThreshold(gray, sobel_kernel=15, thresh=(0.7, 1.2))
+    gradx = abs_sobel_thresh(gray, orient='x', sobel_kernel=ksize, thresh=(23, 100))
+    grady = abs_sobel_thresh(gray, orient='y', sobel_kernel=ksize, thresh=(23, 100))
+    mag_binary = mag_thresh(gray, sobel_kernel=ksize, mag_thresh=(70, 130))
+    #dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0, np.pi/2))
+    dir_binary = dir_threshold(gray, sobel_kernel=15, thresh=(0.7, 1.2))
 
     gray_combined = np.zeros_like(dir_binary)
     #gray_combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 1
     gray_combined[((gradx == 1) & (grady == 1)) | (mag_binary == 1)] = 1
 
     # gradients on different color spaces
-    hls_binary = hlsThreshold(image, s_thresh=(170, 255), sx_thresh=(15, 70))
-    hsv_binary = hsvThreshold(image, s_thresh=(170, 255), vsx_thresh=(9, 42))
+    hls_binary = hls_threshold(image, s_thresh=(170, 255), sx_thresh=(15, 70))
+    hsv_binary = hsv_threshold(image, s_thresh=(170, 255), vsx_thresh=(9, 42))
 
     combined_binary = np.zeros_like(gray_combined)
     #combined_binary[(gray_combined == 1) | ((hls_binary == 1) & (hsv_binary == 1))] = 1
@@ -243,7 +243,7 @@ def find_lane_pixels(binary_warped):
         # Create an output image to draw on and visualize the result
         out_img = np.dstack((binary_warped, binary_warped, binary_warped))
 
-        plt.imshow(histogram)
+        plt.plot(histogram)
         filename = 'output_images/debug/histogram' + str(frame_count) + '.png'
         plt.savefig(filename)
         plt.close()
@@ -470,11 +470,11 @@ def pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, ima
 
     ## Apply a distortion correction to raw images.
     # first undistort all images to minimize camera effects on the image
-    image = undistortImage(image, camera_matrix, distortion_coeffs)
+    image = undistort_image(image, camera_matrix, distortion_coeffs)
 
     ## Use color transforms, gradients, etc., to create a thresholded binary image.
     #TODO crop image first, to save computation power
-    binary_image = createThresholdedBinaryImage(image)
+    binary_image = create_thresholded_binary_image(image)
 
     ## Apply a perspective transform to rectify binary image ("birds-eye view").
     binary_warped = cv2.warpPerspective(binary_image, transformation_matrix, image_size, flags=cv2.INTER_LINEAR)
@@ -568,7 +568,7 @@ def process_image(image):
 
     out_image, left_fitx, right_fitx, ploty = pipeline(image, camera_matrix, distortion_coeffs, transformation_matrix, image_size)
 
-    undist_image = undistortImage(image, camera_matrix, distortion_coeffs)
+    undist_image = undistort_image(image, camera_matrix, distortion_coeffs)
     ## Warp the detected lane boundaries back onto the original image.
     ## Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
     #FIXME add numerical estimations
@@ -648,6 +648,7 @@ def single_image_main():
 def main():
     video_out = 'video_out.mp4'
     video_in = VideoFileClip('project_video.mp4')
+    video_in = video_in.subclip(23, 27)
     #video_in = VideoFileClip('project_video_cut.mp4')
     #video_in = video_in.subclip(1.3, 3.3)
 
