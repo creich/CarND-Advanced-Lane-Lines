@@ -27,6 +27,9 @@ The goals / steps of this project are the following:
 
 [image7]: ./output_images/thresholdedBinaryImage73.png "pipeline for creating the thresholded binary image"
 
+[image8]: ./output_images/fig73.png
+[image9]: ./output_images/result73.png
+
 [video1]: ./video_out.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -125,9 +128,21 @@ I verified that my perspective transform was working as expected by comparing an
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+Finding lanepixels is split in two parts. first there is a full sliding window search and once i am confident about some lines, i only search a closer area around those lines in the following frames, since i expect the lines to be pretty close.
 
-![alt text][image5]
+you can find the first part in the function called `find_lane_pixels` (from line #239++). first i created a histogram of the binary image i created before. the idea is to use the peaks within the histogram as possible starting points for the lane detection. since i am looking for two lanes (left and right) i also split up the search area.
+once a starting point is found, the first window is centered around that area and from there i go further up the image and search within a given margin next to the former window. in the current configuration i use 9 windows on the vertical axis with a margin of 60. a window is accepted to be good, if it contains at least 50 pixels.
+as a result, the function returns a list of pixels that can later be used to calulate a polynomial to model the lane.
+
+the calculation of the polynomial can be found in a function called `fit_poly` (line #344). it follows pretty straight forward the algorithm used during the lessons. so it takes the pixel list from the sliding windows and uses the numpy function `polyfit()` to calulate the coeffitients of a second degree polynomial. those are used to calculate exact points (x, y) to form a line, that is supposed to be the lane boundry.
+the rest of the function is used to minimize flickering and wobbeling of the line later within the video mode.
+
+the second version is called `search_around_poly` and can be found at code line #388++. acutally it's functionality is pretty similar to the first one, except for the fact that i could drop the histogram and narrowed down the margin around the last found line lixels.
+
+see the following images for visualization:
+
+![image8]
+![image9]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
