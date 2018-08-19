@@ -18,14 +18,14 @@ The goals / steps of this project are the following:
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
 [//]: # (Image References)
+[image1]: ./examples/corners_found_0.jpg "detected corners on chessboard image"
+[image2]: ./examples/calibration1_distorted.jpg "distorted"
+[image3]: ./examples/calibration1_undistorted.jpg "undistorted"
+[image4]: ./examples/straight_lines1_distorted.jpg 
+[image5]: ./examples/straight_lines1_undistorted.jpg
+[image6]: ./examples/warped_straight_lines2.jpg
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[video1]: ./video_out.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -43,13 +43,20 @@ You're reading it!
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The code for this step is contained in the file named `calibrate_camera.py` (lines 12 - 61).
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+basically i followed the 'default' procedure to calibrate a camera using opencv. that means, take several images of a predefined chesboard pattern from different angels and distances. then go through all those images and extract the chessboard corners (in this case there are 9 corners on the X-axis and 6 on the Y-axis) using cv2.findChessboardCorners().
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
+to map those corners to real world coordinates, i prepared some "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image. here the chessboard pattern helps to ease things up a lot, since i know that they all have the same distance. Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.
 
-![alt text][image1]
+Finally the output `objpoints` and `imgpoints` are used to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function. I added some images that describe the process.
+
+![image1]
+![image2]
+![image3]
+![image4]
+![image5]
+![image6]
 
 ### Pipeline (single images)
 
