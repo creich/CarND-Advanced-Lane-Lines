@@ -18,14 +18,14 @@ The goals / steps of this project are the following:
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
 [//]: # (Image References)
-[image1]: ./examples/corners_found_0.jpg "detected corners on chessboard image"
-[image2]: ./examples/calibration1_distorted.jpg "distorted"
-[image3]: ./examples/calibration1_undistorted.jpg "undistorted"
-[image4]: ./examples/straight_lines1_distorted.jpg 
-[image5]: ./examples/straight_lines1_undistorted.jpg
-[image6]: ./examples/warped_straight_lines2.jpg
+[image1]: ./output_images/corners_found_0.jpg "detected corners on chessboard image"
+[image2]: ./output_images/calibration1_distorted.jpg "distorted"
+[image3]: ./output_images/calibration1_undistorted.jpg "undistorted"
+[image4]: ./output_images/straight_lines1_distorted.jpg 
+[image5]: ./output_images/straight_lines1_undistorted.jpg
+[image6]: ./output_images/warped_straight_lines2.jpg
 
-[image7]: ./examples/thresholdedBinaryImage73.png "pipeline for creating the thresholded binary image"
+[image7]: ./output_images/thresholdedBinaryImage73.png "pipeline for creating the thresholded binary image"
 
 [video1]: ./video_out.mp4 "Video"
 
