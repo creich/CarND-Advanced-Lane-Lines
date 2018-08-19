@@ -10,7 +10,7 @@ DEBUG = False
 #TODO make filename a parameter
 PICKLE_FILE_NAME = 'camera_calibration_data.p'
 
-def calibrateCamera():
+def calibrate_camera():
 
     ## find chessboard corners
 
@@ -61,8 +61,7 @@ def calibrateCamera():
     ## Do camera calibration given object points and image points
     return cv2.calibrateCamera(objpoints, imgpoints, imageSize, None, None)
 
-#TODO clean up! most stuff is not really needed here. only for debugging...
-def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
+def calc_perspactive_transform_matrix(cameraMatrix, distortionCoeffs):
     #                  top_left    top_right  bot_left    bot_right
     # from undistorted straight_lines2
     src = np.float32([[585, 460], [702, 460], [310, 660], [1000, 660]])
@@ -80,12 +79,12 @@ def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
     y_max, x_max = image.shape[0], image.shape[1]
 
     if DEBUG:
-        image = undistortImage(image, cameraMatrix, distortionCoeffs)
+        image = undistort_image(image, cameraMatrix, distortionCoeffs)
 
         warped = cv2.warpPerspective(image, M, (x_max, y_max), flags=cv2.INTER_LINEAR)
 
         image2 = mpimg.imread('test_images/straight_lines2.jpg')
-        image2 = undistortImage(image2, cameraMatrix, distortionCoeffs)
+        image2 = undistort_image(image2, cameraMatrix, distortionCoeffs)
         warped2 = cv2.warpPerspective(image2, M, (x_max, y_max), flags=cv2.INTER_LINEAR)
 
         f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(24, 9))
@@ -110,7 +109,7 @@ def calcPerspactiveTransformMatrix(cameraMatrix, distortionCoeffs):
 
     return M, (x_max, y_max)
 
-def undistortImage(image, camera_matrix, distortion_coeffs):
+def undistort_image(image, camera_matrix, distortion_coeffs):
     image = cv2.undistort(image, camera_matrix, distortion_coeffs, None, camera_matrix)
     #TODO uncomment to save undistorted image
     #mpimg.imwrite('output_images/test_undist.jpg', image)
@@ -119,27 +118,27 @@ def undistortImage(image, camera_matrix, distortion_coeffs):
 
 ## Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
 print("calibrate camera...")
-ret, camera_matrix, distortion_coeffs, rvecs, tvecs = calibrateCamera()
+ret, camera_matrix, distortion_coeffs, rvecs, tvecs = calibrate_camera()
 print("done.")
 
 if DEBUG:
     image = mpimg.imread('test_images/straight_lines1.jpg')
     mpimg.imsave('output_images/straight_lines1_distorted.jpg', image)
-    image = undistortImage(image, camera_matrix, distortion_coeffs)
+    image = undistort_image(image, camera_matrix, distortion_coeffs)
     mpimg.imsave('output_images/straight_lines1_undistorted.jpg', image)
 
     image = mpimg.imread('test_images/straight_lines2.jpg')
     mpimg.imsave('output_images/straight_lines2_distorted.jpg', image)
-    image = undistortImage(image, camera_matrix, distortion_coeffs)
+    image = undistort_image(image, camera_matrix, distortion_coeffs)
     mpimg.imsave('output_images/straight_lines2_undistorted.jpg', image)
 
     image = mpimg.imread('camera_cal/calibration1.jpg')
     mpimg.imsave('output_images/calibration1_distorted.jpg', image)
-    image = undistortImage(image, camera_matrix, distortion_coeffs)
+    image = undistort_image(image, camera_matrix, distortion_coeffs)
     mpimg.imsave('output_images/calibration1_undistorted.jpg', image)
 
 # calculate transformation matrix
-transformation_matrix, image_size = calcPerspactiveTransformMatrix(camera_matrix, distortion_coeffs)
+transformation_matrix, image_size = calc_perspactive_transform_matrix(camera_matrix, distortion_coeffs)
 
 # thx to ajsmilutin for the snippet of 'how to use pickle'
 # https://github.com/ajsmilutin/CarND-Advanced-Lane-Lines/blob/master/calibrate.py
