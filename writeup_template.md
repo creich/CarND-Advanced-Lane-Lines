@@ -25,6 +25,8 @@ The goals / steps of this project are the following:
 [image5]: ./examples/straight_lines1_undistorted.jpg
 [image6]: ./examples/warped_straight_lines2.jpg
 
+[image7]: ./examples/thresholdedBinaryImage73.png "pipeline for creating the thresholded binary image"
+
 [video1]: ./video_out.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
